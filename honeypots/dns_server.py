@@ -10,6 +10,7 @@
 //  -------------------------------------------------------------
 """
 
+from datetime import datetime
 from warnings import filterwarnings
 filterwarnings(action='ignore', module='.*OpenSSL.*')
 
@@ -29,7 +30,7 @@ class QDNSServer():
         self.auto_disabled = None
         self.resolver_addresses = resolver_addresses or [('8.8.8.8', 53)]
         self.process = None
-        self.uuid = 'honeypotslogger' + '_' + __class__.__name__ + '_' + str(uuid4())[:8]
+        self.uuid = 'dns.log'
         self.config = config
         self.ip = None
         self.port = None
@@ -61,13 +62,13 @@ class QDNSServer():
         class CustomDNSServerFactory(DNSServerFactory):
             def gotResolverResponse(self, response, protocol, message, address):
                 args = (self, response, protocol, message, address)
-                _q_s.logs.info(['servers', {'server': 'dns_server', 'action': 'connection', 'ip': address[0], 'port':address[1]}])
+                _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "dns", "action": "connection", "src_ip": address[0], "src_port": address[1], "dest_port": _q_s.port})
                 try:
                     for items in response:
                         for item in items:
-                            _q_s.logs.info(['servers', {'server': 'dns_server', 'action': 'query', 'ip': address[0], 'port':address[1], 'payload':item.payload}])
+                            _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "dns", "action": "query", "src_ip": address[0], "src_port": address[1], "dest_port": _q_s.port, "payload": item.payload})
                 except Exception as e:
-                    _q_s.logs.error(['errors', {'server': 'dns_server', 'error': 'gotResolverResponse', 'type': 'error -> ' + repr(e)}])
+                    _q_s.logs.error({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "dns", "error": "gotResolverResponse", "type": "error -> " + repr(e)})
                 return DNSServerFactory.gotResolverResponse(*args)
 
         self.resolver = CustomCilentResolver(servers=self.resolver_addresses)
@@ -85,17 +86,17 @@ class QDNSServer():
                     self.port = port
                     self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--config', str(self.config), '--uuid', str(self.uuid)])
                     if self.process.poll() is None:
-                        self.logs.info(["servers", {'server': 'dns_server', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port}])
+                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "dns", "action": "process", "status": "success", "ip": self.ip, "port": self.port})
                     else:
-                        self.logs.info(["servers", {'server': 'dns_server', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port}])
+                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "dns", "action": "process", "status": "error", "ip": self.ip, "port": self.port})
                 else:
-                    self.logs.info(["servers", {'server': 'dns_server', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "dns", "action": "setup", "status": "error", "ip": self.ip, "port": self.port})
             elif self.close_port() and self.kill_server():
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--config', str(self.config), '--uuid', str(self.uuid)])
                 if self.process.poll() is None:
-                    self.logs.info(["servers", {'server': 'dns_server', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "dns", "action": "process", "status": "success", "ip": self.ip, "port": self.port})
                 else:
-                    self.logs.info(["servers", {'server': 'dns_server', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "dns", "action": "process", "status": "error", "ip": self.ip, "port": self.port})
         else:
             self.dns_server_main()
 

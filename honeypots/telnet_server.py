@@ -28,7 +28,7 @@ class QTelnetServer():
         self.mocking = mocking or ''
         self.random_servers = ['Ubuntu 18.04 LTS', 'Ubuntu 16.04.3 LTS', 'Welcome to Microsoft Telnet Server.']
         self.process = None
-        self.uuid = __class__.__name__ + '.log'
+        self.uuid = 'telnet.log'
         self.ip = None
         self.port = None
         self.username = None
