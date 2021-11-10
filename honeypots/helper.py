@@ -98,7 +98,7 @@ def setup_logger(temp_name, config, drop=False):
     elif 'terminal' in logs:
         ret_logs_obj.addHandler(CustomHandler(temp_name, logs))
     if 'file' in logs:
-        formatter = Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] - %(message)s')
+        formatter = Formatter('%(message)s')
         file_handler = RotatingFileHandler(path.join(logs_location, temp_name), maxBytes=10000, backupCount=10)
         file_handler.setFormatter(formatter)
         ret_logs_obj.addHandler(file_handler)
@@ -215,14 +215,7 @@ class CustomHandler(Handler):
                     self.db.insert_into_data_safe(record.msg[0], dumps(serialize_object(record.msg[1]), cls=ComplexEncoder))
             if 'terminal' in self.logs:
                 time_now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                if record.msg[0] == "servers":
-                    if "server" in record.msg[1]:
-                        temp = record.msg[1]
-                        action = record.msg[1]['action']
-                        server = temp['server'].replace('server', '').replace('_', '')
-                        del temp['server']
-                        del temp['action']
-                        stdout.write("[{}] [{}] [{}] -> {}\n".format(time_now, server, action, dumps(temp, sort_keys=True, cls=ComplexEncoder)))
+                stdout.write(dumps(record.msg, sort_keys=True, cls=ComplexEncoder) + "\n")
             if 'syslog' in self.logs:
                 stdout.write(dumps(record.msg, sort_keys=True, cls=ComplexEncoder) + "\n")
         except Exception as e:
