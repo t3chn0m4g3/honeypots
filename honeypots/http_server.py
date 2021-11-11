@@ -10,6 +10,7 @@
 //  -------------------------------------------------------------
 """
 
+from datetime import datetime
 from warnings import filterwarnings
 filterwarnings(action='ignore', module='.*OpenSSL.*')
 
@@ -39,7 +40,7 @@ class QHTTPServer():
         self.cert = path.join(gettempdir(), next(_get_candidate_names()))
         self.random_servers = ['Apache', 'nginx', 'Microsoft-IIS/7.5', 'Microsoft-HTTPAPI/2.0', 'Apache/2.2.15', 'SmartXFilter', 'Microsoft-IIS/8.5', 'Apache/2.4.6', 'Apache-Coyote/1.1', 'Microsoft-IIS/7.0', 'Apache/2.4.18', 'AkamaiGHost', 'Apache/2.2.25', 'Microsoft-IIS/10.0', 'Apache/2.2.3', 'nginx/1.12.1', 'Apache/2.4.29', 'cloudflare', 'Apache/2.2.22']
         self.process = None
-        self.uuid = 'honeypotslogger' + '_' + __class__.__name__ + '_' + str(uuid4())[:8]
+        self.uuid = 'http.log'
         self.ip = None
         self.port = None
         self.username = None
@@ -146,14 +147,13 @@ class QHTTPServer():
                 except BaseException:
                     pass
 
-                _q_s.logs.info(["servers", {'server': 'http_server', 'action': 'connection', 'ip': request.getClientIP(), 'request': headers}])
-
+                _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http", "action": "connection", "src_ip": request.getClientIP(), "dest_port": _q_s.port, "request": headers})
                 if self.server != "":
                     request.responseHeaders.removeHeader("Server")
                     request.responseHeaders.addRawHeader("Server", self.server)
 
                 if request.method == b"GET":
-                    _q_s.logs.info(["servers", {'server': 'http_server', 'action': 'get', 'ip': request.getClientIP()}])
+                    _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http", "action": "get", "src_ip": request.getClientIP(), "dest_port": _q_s.port})
                     if request.uri == b"/login.html":
                         if _q_s.username != '' and _q_s.password != '':
                             request.responseHeaders.addRawHeader("Content-Type", "text/html; charset=utf-8")
@@ -164,7 +164,7 @@ class QHTTPServer():
 
                 elif request.method == b"POST":
                     self.headers = request.getAllHeaders()
-                    _q_s.logs.info(["servers", {'server': 'http_server', 'action': 'post', 'ip': request.getClientIP()}])
+                    _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http", "action": "post", "src_ip": request.getClientIP(), "dest_port": _q_s.port})
                     if request.uri == b"/login.html" or b'/':
                         if _q_s.username != '' and _q_s.password != '':
                             form = FieldStorage(fp=request.content, headers=self.headers, environ={'REQUEST_METHOD': 'POST', 'CONTENT_TYPE': self.headers[b'content-type'], })
@@ -174,9 +174,9 @@ class QHTTPServer():
                                 form['password'].value = self.check_bytes(form['password'].value)
 
                                 if form['username'].value == _q_s.username and form['password'].value == _q_s.password:
-                                    _q_s.logs.info(["servers", {'server': 'http_server', 'action': 'login', 'status': 'success', 'ip': request.getClientIP(), 'username': _q_s.username, 'password': _q_s.password}])
+                                    _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http", "action": "login", "status": "success", "src_ip": request.getClientIP(), "dest_port": _q_s.port, "username": _q_s.username, "password": _q_s.password})
                                 else:
-                                    _q_s.logs.info(["servers", {'server': 'http_server', 'action': 'login', 'status': 'failed', 'ip': request.getClientIP(), 'username': form['username'].value, 'password':form['password'].value}])
+                                    _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http", "action": "login", "status": "failed", "src_ip": request.getClientIP(), "dest_port": _q_s.port, "username": form["username"].value, "password":form["password"].value})
 
                     request.responseHeaders.addRawHeader("Content-Type", "text/html; charset=utf-8")
                     return self.home_file
@@ -195,17 +195,17 @@ class QHTTPServer():
                     self.port = port
                     self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                     if self.process.poll() is None:
-                        self.logs.info(["servers", {'server': 'http_server', 'action': 'process', 'status': 'success', 'route': '/login.html', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http", "action": "process", "status": "success", "route": "/login.html", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
                     else:
-                        self.logs.info(["servers", {'server': 'http_server', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
                 else:
-                    self.logs.info(["servers", {'server': 'http_server', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http", "action": "setup", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
             elif self.close_port() and self.kill_server():
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                 if self.process.poll() is None:
-                    self.logs.info(["servers", {'server': 'http_server', 'action': 'process', 'status': 'success', 'route': '/login.html', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http", "action": "process", "status": "success", "route": "/login.html", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
                 else:
-                    self.logs.info(["servers", {'server': 'http_server', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
         else:
             self.http_server_main()
 
