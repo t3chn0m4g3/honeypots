@@ -10,6 +10,7 @@
 //  -------------------------------------------------------------
 """
 
+from datetime import datetime
 from warnings import filterwarnings
 filterwarnings(action='ignore', category=DeprecationWarning)
 
@@ -38,7 +39,7 @@ class QSMBServer():
         self.auto_disabled = None
         self.mocking = mocking or ''
         self.process = None
-        self.uuid = 'honeypotslogger' + '_' + __class__.__name__ + '_' + str(uuid4())[:8]
+        self.uuid = 'smb.log'
         self.config = config
         self.ip = None
         self.port = None
@@ -69,13 +70,13 @@ class QSMBServer():
                 # sys.stdout.flush()
                 try:
                     if "Incoming connection" in message.strip() or "AUTHENTICATE_MESSAGE" in message.strip() or "authenticated successfully" in message.strip():
-                        _q_s.logs.info(["servers", {'server': 'smb_server', 'action': 'connection', 'msg': message.strip()}])
+                        _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smb", "action": "connection", "msg": message.strip(), "dest_port": _q_s.port})
                     elif ":4141414141414141:" in message.strip():
                         parsed = message.strip().split(":")
                         if len(parsed) > 2:
-                            _q_s.logs.info(["servers", {'server': 'smb_server', 'action': 'login', 'workstation': parsed[0], 'test':parsed[1]}])
+                            _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smb", "action": "login", "dest_port": _q_s.port, "workstation": parsed[0], "test":parsed[1]})
                 except Exception as e:
-                    _q_s.logs.error(["errors", {'server': 'smb_server', 'error': 'write', "type": "error -> " + repr(e)}])
+                    _q_s.logs.error({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smb", "error": "write", "type": "error -> " + repr(e)})
 
         handler = StreamHandler(Logger())
         getLogger("impacket").addHandler(handler)
@@ -106,17 +107,17 @@ class QSMBServer():
                     self.port = port
                     self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--folders', str(self.folders), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                     if self.process.poll() is None:
-                        self.logs.info(["servers", {'server': 'smb_server', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password, 'folders': str(self.folders)}])
+                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smb", "action": "process", "status": "success", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password, "folders": str(self.folders)})
                     else:
-                        self.logs.info(["servers", {'server': 'smb_server', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password, 'folders': str(self.folders)}])
+                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smb", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password, "folders": str(self.folders)})
                 else:
-                    self.logs.info(["servers", {'server': 'smb_server', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password, 'folders': str(self.folders)}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smb", "action": "setup", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password, "folders": str(self.folders)})
             elif self.close_port() and self.kill_server():
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--folders', str(self.folders), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                 if self.process.poll() is None:
-                    self.logs.info(["servers", {'server': 'smb_server', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password, 'folders': str(self.folders)}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smb", "action": "process", "status": "success", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password, "folders": str(self.folders)})
                 else:
-                    self.logs.info(["servers", {'server': 'smb_server', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password, 'folders': str(self.folders)}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smb", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password, "folders": str(self.folders)})
         else:
             self.smb_server_main()
 
@@ -130,7 +131,7 @@ class QSMBServer():
             smb_client = SMBConnection(_ip, _ip, sess_port=_port)
             smb_client.login(_username, _password)
         except Exception as e:
-            self.logs.error(["errors", {'server': 'smb_server', 'error': 'write', "type": "error -> " + repr(e)}])
+            self.logs.error({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smb", "error": "write", "type": "error -> " + repr(e)})
 
     def close_port(self):
         ret = close_port_wrapper('smb_server', self.ip, self.port, self.logs)

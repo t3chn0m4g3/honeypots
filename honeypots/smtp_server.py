@@ -10,6 +10,7 @@
 //  -------------------------------------------------------------
 """
 
+from datetime import datetime
 from warnings import filterwarnings
 filterwarnings(action='ignore', category=DeprecationWarning)
 
@@ -30,7 +31,7 @@ class QSMTPServer():
         self.mocking = mocking or ''
         self.random_servers = []
         self.process = None
-        self.uuid = 'honeypotslogger' + '_' + __class__.__name__ + '_' + str(uuid4())[:8]
+        self.uuid = 'smtp.log'
         self.config = config
         self.ip = None
         self.port = None
@@ -58,7 +59,7 @@ class QSMTPServer():
                     return str(string)
 
             def smtp_EHLO(self, arg):
-                _q_s.logs.info(["servers", {'server': 'smtp_server', 'action': 'connection', 'ip': self.addr[0], 'port':self.addr[1]}])
+                _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smtp", "action": "connection", "src_ip": self.addr[0], "src_port":self.addr[1], "dest_port": _q_s.port})
                 if not arg:
                     self.push('501 Syntax: HELO hostname')
                 if self._SMTPChannel__greeting:
@@ -77,12 +78,12 @@ class QSMTPServer():
                         username = self.check_bytes(username)
                         password = self.check_bytes(password)
                         if username == _q_s.username and password == _q_s.password:
-                            _q_s.logs.info(["servers", {'server': 'smtp_server', 'action': 'login', 'status': 'success', 'ip': self.addr[0], 'port':self.addr[1], 'username':_q_s.username, 'password':_q_s.password}])
+                            _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smtp", "action": "login", "status": "success", "src_ip": self.addr[0], "src_port":self.addr[1], "dest_port": _q_s.port, "username":_q_s.username, "password":_q_s.password})
                         else:
-                            _q_s.logs.info(["servers", {'server': 'smtp_server', 'action': 'login', 'status': 'faild', 'ip': self.addr[0], 'port':self.addr[1], 'username':username, 'password':password}])
+                            _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smtp", "action": "login", "status": "failed", "src_ip": self.addr[0], "src_port":self.addr[1], "dest_port": _q_s.port, "username":username, "password":password})
                 except Exception as e:
                     print(e)
-                    _q_s.logs.error(["errors", {'server': 'smtp_server', 'error': 'smtp_AUTH', "type": "error -> " + repr(e)}])
+                    _q_s.logs.error({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smtp", "error": "smtp_AUTH", "type": "error -> " + repr(e)})
 
                 self.push('235 Authentication successful')
 
@@ -111,17 +112,17 @@ class QSMTPServer():
                     self.port = port
                     self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                     if self.process.poll() is None:
-                        self.logs.info(["servers", {'server': 'smtp_server', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smtp", "action": "process", "status": "success", "src_ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
                     else:
-                        self.logs.info(["servers", {'server': 'smtp_server', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smtp", "action": "process", "status": "error", "src_ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
                 else:
-                    self.logs.info(["servers", {'server': 'smtp_server', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smtp", "action": "setup", "status": "error", "src_ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
             elif self.close_port() and self.kill_server():
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                 if self.process.poll() is None:
-                    self.logs.info(["servers", {'server': 'smtp_server', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smtp", "action": "process", "status": "success", "src_ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
                 else:
-                    self.logs.info(["servers", {'server': 'smtp_server', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "smtp", "action": "process", "status": "error", "src_ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
         else:
             self.smtp_server_main()
 
