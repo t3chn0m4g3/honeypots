@@ -10,6 +10,7 @@
 //  -------------------------------------------------------------
 """
 
+from datetime import datetime
 from warnings import filterwarnings
 filterwarnings(action='ignore', module='.*OpenSSL.*')
 
@@ -40,7 +41,7 @@ class QVNCServer():
         else:
             self.load_words()
         self.process = None
-        self.uuid = 'honeypotslogger' + '_' + __class__.__name__ + '_' + str(uuid4())[:8]
+        self.uuid = 'vnc.log'
         self.ip = None
         self.port = None
         self.username = None
@@ -87,7 +88,7 @@ class QVNCServer():
             def connectionMade(self):
                 self.transport.write(b'RFB 003.008\n')
                 self._state = 1
-                _q_s.logs.info(["servers", {'server': 'vnc_server', 'action': 'connection', 'ip': self.transport.getPeer().host, 'port': self.transport.getPeer().port}])
+                _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "vnc", "action": "connection", "src_ip": self.transport.getPeer().host, "src_port": self.transport.getPeer().port, "dest_port": _q_s.port})
 
             def dataReceived(self, data):
                 if self._state == 1:
@@ -102,13 +103,13 @@ class QVNCServer():
                     _x = _q_s.decode(_q_s.challenge, data.hex())
                     if _x:
                         if _x == _q_s.password:
-                            _q_s.logs.info(["servers", {'server': 'vnc_server', 'action': 'login', 'status': 'success', 'ip': self.transport.getPeer().host, 'port': self.transport.getPeer().port, 'username': 'UnKnown', 'password': _q_s.password}])
+                            _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "vnc", "action": "login", "status": "success", "src_ip": self.transport.getPeer().host, "src_port": self.transport.getPeer().port, "dest_port": _q_s.port, "username": "UnKnown", "password": _q_s.password})
                         else:
-                            _q_s.logs.info(["servers", {'server': 'vnc_server', 'action': 'login', 'status': 'failed', 'ip': self.transport.getPeer().host, 'port': self.transport.getPeer().port, 'username': 'UnKnown', 'password': _x}])
+                            _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "vnc", "action": "login", "status": "failed", "src_ip": self.transport.getPeer().host, "src_port": self.transport.getPeer().port, "dest_port": _q_s.port, "username": "UnKnown", "password": _x})
                     else:
                         if len(data) == 16:
                             # we need to check the lenth check length first
-                            _q_s.logs.info(["servers", {'server': 'vnc_server', 'action': 'login', 'status': 'failed', 'ip': self.transport.getPeer().host, 'port': self.transport.getPeer().port, 'username': 'UnKnown', 'password': data.hex()}])
+                            _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "vnc", "action": "login", "status": "failed", "src_ip": self.transport.getPeer().host, "src_port": self.transport.getPeer().port, "dest_port": _q_s.port, "username": "UnKnown", "password": data.hex()})
                     self.transport.loseConnection()
                 else:
                     self.transport.loseConnection()
@@ -129,17 +130,17 @@ class QVNCServer():
                     self.port = port
                     self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                     if self.process.poll() is None:
-                        self.logs.info(["servers", {'server': 'vnc_server', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "vnc", "action": "process", "status": "success", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
                     else:
-                        self.logs.info(["servers", {'server': 'vnc_server', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "vnc", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
                 else:
-                    self.logs.info(["servers", {'server': 'vnc_server', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "vnc", "action": "setup", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
             elif self.close_port() and self.kill_server():
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                 if self.process.poll() is None:
-                    self.logs.info(["servers", {'server': 'vnc_server', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "vnc", "action": "process", "status": "success", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
                 else:
-                    self.logs.info(["servers", {'server': 'vnc_server', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}])
+                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "vnc", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
         else:
             self.vnc_server_main()
 
