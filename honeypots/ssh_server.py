@@ -11,6 +11,7 @@
 """
 
 from datetime import datetime
+from json import dumps
 from warnings import filterwarnings
 filterwarnings(action='ignore', module='.*paramiko.*')
 
@@ -79,15 +80,15 @@ class QSSHServer():
                 username = self.check_bytes(username)
                 password = self.check_bytes(password)
                 if username == _q_s.username and password == _q_s.password:
-                    _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "login", "status": "success", "src_ip": self.ip, "src_port": self.port, "dest_port": _q_s.port, "username": username, "password": password})
+                    _q_s.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "login", "status": "success", "src_ip": self.ip, "src_port": self.port, "dest_port": _q_s.port, "username": username, "password": password}))
                 else:
-                    _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "login", "status": "failed", "src_ip": self.ip, "src_port": self.port, "dest_port": _q_s.port, "username": username, "password": password})
+                    _q_s.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "login", "status": "failed", "src_ip": self.ip, "src_port": self.port, "dest_port": _q_s.port, "username": username, "password": password}))
 
         def ConnectionHandle(client, priv):
             try:
                 t = Transport(client)
                 ip, port = client.getpeername()
-                _q_s.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "connection", "src_ip": ip, "src_port": port, "dest_port": _q_s.port})
+                _q_s.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "connection", "src_ip": ip, "src_port": port, "dest_port": _q_s.port}))
                 t.local_version = 'SSH-2.0-' + choice(self.random_servers)
                 t.add_server_key(RSAKey(file_obj=StringIO(priv)))
                 t.start_server(server=SSHHandle(ip, port))
@@ -117,17 +118,17 @@ class QSSHServer():
                     self.port = port
                     self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                     if self.process.poll() is None:
-                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "process", "status": "success", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
+                        self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "process", "status": "success", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password}))
                     else:
-                        self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
+                        self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password}))
                 else:
-                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "setup", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
+                    self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "setup", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password}))
             elif self.close_port() and self.kill_server():
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                 if self.process.poll() is None:
-                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "process", "status": "success", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
+                    self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "process", "status": "success", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password}))
                 else:
-                    self.logs.info({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password})
+                    self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "ssh_server", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password}))
         else:
             self.ssh_server_main()
 
@@ -140,7 +141,7 @@ class QSSHServer():
             _password = password or self.password
             ssh = SSHClient()
             ssh.set_missing_host_key_policy(AutoAddPolicy())  # if you have default ones, remove them before using this..
-            ssh.connect(_ip, port=_port, username=_username, password=_password)
+            ssh.connect(_ip, port=_port, username=_username, password=_password, banner_timeout=200)
         except BaseException:
             pass
 
