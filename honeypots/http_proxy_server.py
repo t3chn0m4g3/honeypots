@@ -63,15 +63,15 @@ class QHTTPProxyServer():
                     _, parsed_request = request_string.split(b'\r\n', 1)
                     headers = BytesParser().parsebytes(parsed_request)
                     host = headers["host"].split(":")
-                    _q_s.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http_proxy", "action": "query", "src_ip": self.transport.getPeer().host, "src_port": self.transport.getPeer().port, "dest_port": _q_s.port, "payload": host[0]}))
+                    _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'query', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'payload': host[0]}))
                     # return "127.0.0.1"
                     return dsnquery(host[0], 'A')[0].address
                 except Exception as e:
-                    _q_s.logs.error(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http_proxy", "error": "resolve_domain", "type": "error -> " + repr(e)}))
+                    _q_s.logs.error(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'error': 'resolve_domain', 'type': 'error -> ' + repr(e)}))
                 return None
 
             def dataReceived(self, data):
-                _q_s.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http_proxy", "action": "connection", "src_ip": self.transport.getPeer().host, "src_port": self.transport.getPeer().port, "dest_port": _q_s.port}))
+                _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'connection', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port}))
                 try:
                     ip = self.resolve_domain(data)
                     if ip:
@@ -115,17 +115,17 @@ class QHTTPProxyServer():
                     self.port = port
                     self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                     if self.process.poll() is None:
-                        self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http_proxy", "action": "process", "status": "success", "ip": self.ip, "port": self.port}))
+                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port}))
                     else:
-                        self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http_proxy", "action": "process", "status": "error", "ip": self.ip, "port": self.port}))
+                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port}))
                 else:
-                    self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http_proxy", "action": "setup", "status": "error", "ip": self.ip, "port": self.port}))
+                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port}))
             elif self.close_port() and self.kill_server():
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                 if self.process.poll() is None:
-                    self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http_proxy", "action": "process", "status": "success", "ip": self.ip, "port": self.port}))
+                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port}))
                 else:
-                    self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "protocol": "http_proxy", "action": "process", "status": "error", "ip": self.ip, "port": self.port}))
+                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port}))
         else:
             self.http_proxy_server_main()
 

@@ -59,7 +59,7 @@ class QIMAPServer():
                     return str(string)
 
             def connectionMade(self):
-                _q_s.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "server": "imap", "action": "connection", "src_ip": self.transport.getPeer().host, "src_port": self.transport.getPeer().port, "dest_port": _q_s.port}))
+                _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'server': 'imap', 'action': 'connection', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port}))
 
                 if isinstance(_q_s.mocking, bool):
                     if _q_s.mocking == True:
@@ -74,9 +74,9 @@ class QIMAPServer():
                 passwd = self.check_bytes(user)
 
                 if user == _q_s.username and passwd == _q_s.password:
-                    _q_s.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "server": "imap", "action": "login", "status": "success", "src_ip": self.transport.getPeer().host, "src_port": self.transport.getPeer().port, "dest_port": _q_s.port, "username": _q_s.username, "password": _q_s.password}))
+                    _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'server': 'imap', 'action': 'login', 'status': 'success', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'username': _q_s.username, 'password': _q_s.password}))
                 else:
-                    _q_s.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "server": "imap", "action": "login", "status": "failed", "src_ip": self.transport.getPeer().host, "src_port": self.transport.getPeer().port, "dest_port": _q_s.port, "username": user, "password": passwd}))
+                    _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'server': 'imap', 'action': 'login', 'status': 'failed', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'username': user, 'password': passwd}))
 
                 raise cred.error.UnauthorizedLogin()
 
@@ -110,17 +110,17 @@ class QIMAPServer():
                     self.port = port
                     self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                     if self.process.poll() is None:
-                        self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "server": "imap", "action": "process", "status": "success", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password}))
+                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'server': 'imap', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
                     else:
-                        self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "server": "imap", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password}))
+                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'server': 'imap', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
                 else:
-                    self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "server": "imap", "action": "setup", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password}))
+                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'server': 'imap', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
             elif self.close_port() and self.kill_server():
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
                 if self.process.poll() is None:
-                    self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "server": "imap", "action": "process", "status": "success", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password}))
+                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'server': 'imap', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
                 else:
-                    self.logs.info(dumps({"timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "server": "imap", "action": "process", "status": "error", "ip": self.ip, "port": self.port, "username": self.username, "password": self.password}))
+                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'server': 'imap', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
         else:
             self.imap_server_main()
 
