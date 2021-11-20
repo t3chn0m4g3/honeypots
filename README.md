@@ -6,6 +6,8 @@ The honeypots are: dns ftp httpproxy http https imap mysql pop3 postgres redis s
 
 The honeypots output can be logged to a postgres database, file, terminal or syslog
 
+Honeypots now is in the awesome [telekom security T-Pot project!](https://github.com/telekom-security/tpotce)
+
 ## Install
 ```
 pip3 install honeypots
@@ -17,6 +19,14 @@ honeypot, or multiple honeypots separated by comma or word `all`
 
 ```
 python3 -m honeypots --setup ssh
+```
+
+## Usage Example - Local ports needs higher privileges (use sudo -E)
+
+honeypot, or multiple honeypots separated by comma or word `all`
+
+```
+sudo -E python3 -m honeypots --setup ssh:22
 ```
 
 ## Usage Example - Auto configure with specific ports
@@ -45,7 +55,7 @@ python3 -m honeypots --setup ssh --config config.json
 
 honeypot, or multiple honeypots in a dict
 
-```sh
+```bash
 python3 -m honeypots --setup ftp --config config.json
 ```
 
@@ -84,6 +94,45 @@ python3 -m honeypots --setup ftp --config config.json
 
 ```
 
+#### config.json (Output to db)
+```json
+{
+    "logs": "db",
+    "logs_location": "",
+    "syslog_address":"",
+    "syslog_facility":0,
+    "postgres":"//username:password@172.19.0.2:9999/honeypots",
+    "filter": "",
+    "interface": "",
+    "honeypots": {
+        "ftp": {
+            "port": 21,
+            "username": "test",
+            "password": "test"
+        }
+    }
+}
+```
+
+## db structure
+```json
+[
+  {
+    "id": 1,
+    "date": "2021-11-18 06:06:42.304338+00",
+    "data": {
+      "server": "'ftp_server'",
+      "action": "'process'",
+      "status": "'success'",
+      "ip": "'0.0.0.0'",
+      "port": "21",
+      "username": "'test'",
+      "password": "'test'"
+    }
+  }
+]
+```
+
 ## Usage Example - Import as object and auto test
 
 ```
@@ -98,7 +147,7 @@ logs= String E.g db, terminal or all
 always remember to add process=true to run_server() for non-blocking
 ```
 
-```
+```python
 from honeypots import QSSHServer
 qsshserver = QSSHServer(port=9999)
 qsshserver.run_server(process=True)
@@ -108,17 +157,17 @@ qsshserver.kill_server()
 ```
 
 ## Usage Example - Import as object and test with external ssh command
-```
+```python
 #you need higher user permissions for binding\closing some ports
 
 from honeypots import QSSHServer
 qsshserver = QSSHServer(port=9999)
 qsshserver.run_server(process=True)
 ```
-```
+```sh
 ssh test@127.0.0.1
 ```
-```
+```python
 INFO:chameleonlogger:['servers', {'status': 'success', 'username': 'test', 'ip': '127.0.0.1', 'server': 'ssh_server', 'action': 'login', 'password': 'test', 'port': 38696}]
 qsshserver.kill_server()
 ```
