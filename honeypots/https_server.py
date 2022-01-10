@@ -1,4 +1,4 @@
-"""
+'''
 //  -------------------------------------------------------------
 //  author        Giga
 //  project       qeeqbox/honeypots
@@ -8,7 +8,7 @@
 //  -------------------------------------------------------------
 //  contributors list qeeqbox/honeypots/graphs/contributors
 //  -------------------------------------------------------------
-"""
+'''
 
 from datetime import datetime
 from json import dumps
@@ -28,7 +28,7 @@ from random import choice
 from twisted.python import log as tlog
 from subprocess import Popen
 from os import path
-from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars
+from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars, check_if_server_is_running
 from uuid import uuid4
 
 disable_warnings()
@@ -76,8 +76,8 @@ class QHTTPSServer():
         c.set_issuer(c.get_subject())
         c.set_pubkey(pk)
         c.sign(pk, 'sha256')
-        open(cert, "wb").write(crypto.dump_certificate(crypto.FILETYPE_PEM, c))
-        open(key, "wb").write(crypto.dump_privatekey(crypto.FILETYPE_PEM, pk))
+        open(cert, 'wb').write(crypto.dump_certificate(crypto.FILETYPE_PEM, c))
+        open(key, 'wb').write(crypto.dump_privatekey(crypto.FILETYPE_PEM, pk))
 
     def https_server_main(self):
         _q_s = self
@@ -89,18 +89,18 @@ class QHTTPSServer():
 <!DOCTYPE html>
 <html>
 	<head>
-		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.0.0-beta.3/css/bootstrap.min.css" />
-		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
-		<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+		<link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.0.0-beta.3/css/bootstrap.min.css' />
+		<link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css' />
+		<meta http-equiv='content-type' content='text/html;charset=utf-8' />
 		<title>Login</title>
 		<style>
 			body,html{height: 100%;text-align: center;},
 		</style>
 	</head>
 	<body>
-		<div class="container-fluid h-100">
-			<div class="row justify-content-center h-100 align-items-center">
-			<div class="col col-xl-3">
+		<div class='container-fluid h-100'>
+			<div class='row justify-content-center h-100 align-items-center'>
+			<div class='col col-xl-3'>
 				<b>We'll back soon..</b>
 			</div>
 			</div>
@@ -111,25 +111,25 @@ class QHTTPSServer():
             login_file = b'''<!DOCTYPE html>
 <html>
 	<head>
-		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.0.0-beta.3/css/bootstrap.min.css" />
-		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
-		<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+		<link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.0.0-beta.3/css/bootstrap.min.css' />
+		<link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css' />
+		<meta http-equiv='content-type' content='text/html;charset=utf-8' />
 		<title>Login</title>
 		<style>body,html {height: 100%;}</style>
 	</head>
 	<body>
-		<div class="container-fluid h-100">
-			<div class="row justify-content-center h-100 align-items-center">
-			<div class="col col-xl-3">
-				<form id="login" action="" method="post">
-					<div class="form-group">
-						<input class="form-control form-control-sm" name="username" type="text" placeholder="username" id="username">
+		<div class='container-fluid h-100'>
+			<div class='row justify-content-center h-100 align-items-center'>
+			<div class='col col-xl-3'>
+				<form id='login' action='' method='post'>
+					<div class='form-group'>
+						<input class='form-control form-control-sm' name='username' type='text' placeholder='username' id='username'>
 					</div>
-					<div class="form-group">
-						<input class="form-control form-control-sm" name="password" type="password" placeholder="password" id="password">
+					<div class='form-group'>
+						<input class='form-control form-control-sm' name='password' type='password' placeholder='password' id='password'>
 					</div>
-					<div class="form-group">
-						<button class="btn btn-default btn-sm btn-block" type="submit">login</button>
+					<div class='form-group'>
+						<button class='btn btn-default btn-sm btn-block' type='submit'>login</button>
 					</div>
 				</form>
 			</div>
@@ -169,64 +169,71 @@ class QHTTPSServer():
 
                 _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'connection', 'src_ip': request.getClientIP(), 'dest_port': _q_s.port, 'request': headers}))
 
-                if self.server != "":
-                    request.responseHeaders.removeHeader("Server")
-                    request.responseHeaders.addRawHeader("Server", self.server)
+                if self.server != '':
+                    request.responseHeaders.removeHeader('Server')
+                    request.responseHeaders.addRawHeader('Server', self.server)
 
                 if request.method == b"GET":
                     _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'get', 'src_ip': request.getClientIP(), 'dest_port': _q_s.port}))
                     if request.uri == b"/login.html":
                         if _q_s.username != '' and _q_s.password != '':
-                            request.responseHeaders.addRawHeader("Content-Type", "text/html; charset=utf-8")
+                            request.responseHeaders.addRawHeader('Content-Type', 'text/html; charset=utf-8')
                             return self.login_file
 
-                    request.responseHeaders.addRawHeader("Content-Type", "text/html; charset=utf-8")
+                    request.responseHeaders.addRawHeader('Content-Type', 'text/html; charset=utf-8')
                     return self.home_file
 
-                elif request.method == b"POST":
+                elif request.method == b'POST':
                     self.headers = request.getAllHeaders()
                     _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'post', 'src_ip': request.getClientIP(), 'dest_port': _q_s.port}))
-                    if request.uri == b"/login.html" or b'/':
+                    if request.uri == b'/login.html' or b'/':
                         if _q_s.username != '' and _q_s.password != '':
                             form = FieldStorage(fp=request.content, headers=self.headers, environ={'REQUEST_METHOD': 'POST', 'CONTENT_TYPE': self.headers[b'content-type'], })
                             if 'username' in form and 'password' in form:
-                                form['username'].value = self.check_bytes(form['username'].value)
-                                form['password'].value = self.check_bytes(form['password'].value)
-                                if form['username'].value == _q_s.username and form['password'].value == _q_s.password:
-                                    _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'login', 'status': 'success', 'src_ip': request.getClientIP(), 'dest_port': _q_s.port, 'username': _q_s.username, 'password': _q_s.password}))
-                                else:
-                                    _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'login', 'status': 'failed', 'src_ip': request.getClientIP(), 'dest_port': _q_s.port, 'username': form['username'].value, 'password':form['password'].value}))
+                                username = self.check_bytes(form['username'].value)
+                                password = self.check_bytes(form['password'].value)
+                                status = 'failed'
+                                if username == _q_s.username and password == _q_s.password:
+                                    username = _q_s.username
+                                    password = _q_s.password
+                                    status = 'success'
+                                _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'login', 'status': status, 'src_ip': request.getClientIP(), 'dest_port': _q_s.port, 'username': form['username'].value, 'password':form['password'].value}))
 
-                    request.responseHeaders.addRawHeader("Content-Type", "text/html; charset=utf-8")
+                    request.responseHeaders.addRawHeader('Content-Type', 'text/html; charset=utf-8')
                     return self.home_file
                 else:
-                    request.responseHeaders.addRawHeader("Content-Type", "text/html; charset=utf-8")
+                    request.responseHeaders.addRawHeader('Content-Type', 'text/html; charset=utf-8')
                     return self.home_file
 
-        self.CreateCert("localhost", self.key, self.cert)
+        self.CreateCert('localhost', self.key, self.cert)
         ssl_context = ssl.DefaultOpenSSLContextFactory(self.key, self.cert)
         reactor.listenSSL(self.port, Site(MainResource()), ssl_context)
         reactor.run()
 
     def run_server(self, process=False, auto=False):
+        status = 'error'
+        run = False
         if process:
             if auto and not self.auto_disabled:
                 port = get_free_port()
                 if port > 0:
                     self.port = port
-                    self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                    if self.process.poll() is None:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'process', 'status': 'success', 'route': '/login.html', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                    else:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+                    run = True
             elif self.close_port() and self.kill_server():
+                run = True
+
+            if run:
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                if self.process.poll() is None:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'process', 'status': 'success', 'route': '/login.html', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+                if self.process.poll() is None and check_if_server_is_running(self.uuid):
+                    status = 'success'
+
+            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'process', 'status': status, 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+
+            if status == 'success':
+                return True
+            else:
+                self.kill_server()
+                return False
         else:
             self.https_server_main()
 

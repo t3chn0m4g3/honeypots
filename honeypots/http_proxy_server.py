@@ -1,4 +1,4 @@
-"""
+'''
 //  -------------------------------------------------------------
 //  author        Giga
 //  project       qeeqbox/honeypots
@@ -8,7 +8,7 @@
 //  -------------------------------------------------------------
 //  contributors list qeeqbox/honeypots/graphs/contributors
 //  -------------------------------------------------------------
-"""
+'''
 
 from datetime import datetime
 from json import dumps
@@ -23,7 +23,7 @@ from requests import get
 from subprocess import Popen
 from email.parser import BytesParser
 from os import path
-from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars
+from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars, check_if_server_is_running
 from uuid import uuid4
 
 
@@ -62,9 +62,9 @@ class QHTTPProxyServer():
                 try:
                     _, parsed_request = request_string.split(b'\r\n', 1)
                     headers = BytesParser().parsebytes(parsed_request)
-                    host = headers["host"].split(":")
+                    host = headers['host'].split(':')
                     _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'query', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'payload': host[0]}))
-                    # return "127.0.0.1"
+                    # return '127.0.0.1'
                     return dsnquery(host[0], 'A')[0].address
                 except Exception as e:
                     _q_s.logs.error(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'error': 'resolve_domain', 'type': 'error -> ' + repr(e)}))
@@ -108,24 +108,29 @@ class QHTTPProxyServer():
         reactor.run()
 
     def run_server(self, process=False, auto=False):
+        status = 'error'
+        run = False
         if process:
             if auto and not self.auto_disabled:
                 port = get_free_port()
                 if port > 0:
                     self.port = port
-                    self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                    if self.process.poll() is None:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port}))
-                    else:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port}))
+                    run = True
             elif self.close_port() and self.kill_server():
+                run = True
+
+            if run:
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                if self.process.poll() is None:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port}))
+                if self.process.poll() is None and check_if_server_is_running(self.uuid):
+                    status = 'success'
+
+            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'http_proxy', 'action': 'process', 'status': status, 'ip': self.ip, 'port': self.port}))
+
+            if status == 'success':
+                return True
+            else:
+                self.kill_server()
+                return False
         else:
             self.http_proxy_server_main()
 
@@ -133,8 +138,8 @@ class QHTTPProxyServer():
         try:
             _ip = ip or self.ip
             _port = port or self.port
-            _domain = domain or "http://yahoo.com"
-            get(_domain, proxies={"http": 'http://{}:{}'.format(_ip, _port)}).text.encode('ascii', 'ignore')
+            _domain = domain or 'http://yahoo.com'
+            get(_domain, proxies={'http': 'http://{}:{}'.format(_ip, _port)}).text.encode('ascii', 'ignore')
         except BaseException:
             pass
 

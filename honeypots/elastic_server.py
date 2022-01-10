@@ -1,4 +1,4 @@
-"""
+'''
 //  -------------------------------------------------------------
 //  author        Giga
 //  project       qeeqbox/honeypots
@@ -8,7 +8,7 @@
 //  -------------------------------------------------------------
 //  contributors list qeeqbox/honeypots/graphs/contributors
 //  -------------------------------------------------------------
-"""
+'''
 
 from datetime import datetime
 from warnings import filterwarnings
@@ -29,7 +29,7 @@ from os import path
 from OpenSSL import crypto
 from tempfile import gettempdir, _get_candidate_names
 from elasticsearch import Elasticsearch
-from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars
+from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars, check_if_server_is_running
 
 disable_warnings()
 
@@ -75,16 +75,16 @@ class QElasticServer():
         c.set_issuer(c.get_subject())
         c.set_pubkey(pk)
         c.sign(pk, 'sha256')
-        open(cert, "wb").write(crypto.dump_certificate(crypto.FILETYPE_PEM, c))
-        open(key, "wb").write(crypto.dump_privatekey(crypto.FILETYPE_PEM, pk))
+        open(cert, 'wb').write(crypto.dump_certificate(crypto.FILETYPE_PEM, c))
+        open(key, 'wb').write(crypto.dump_privatekey(crypto.FILETYPE_PEM, pk))
 
     def elastic_server_main(self):
         _q_s = self
 
         class CustomElasticServerHandler(SimpleHTTPRequestHandler):
 
-            server_version = ""
-            sys_version = ""
+            server_version = ''
+            sys_version = ''
 
             def _dump_headers(self):
                 headers = {}
@@ -116,8 +116,8 @@ class QElasticServer():
             def _set_response_gzip(self, content, code):
                 self.send_response(code)
                 gzip_compressed_data = self._compress_gzip(content)
-                self.send_header("content-encoding", "gzip")
-                self.send_header("content-length", str(len(gzip_compressed_data)))
+                self.send_header('content-encoding', 'gzip')
+                self.send_header('content-length', str(len(gzip_compressed_data)))
                 self.send_header('content-type', 'application/json; charset=UTF-8')
                 self.end_headers()
                 return gzip_compressed_data
@@ -131,55 +131,55 @@ class QElasticServer():
             def _set_response_gzip_auth(self, content, code):
                 self._dump_headers()
                 self.send_response(code)
-                self._remove_headers([b"server:", b"date:"])
+                self._remove_headers([b'server:', b'date:'])
                 gzip_compressed_data = self._compress_gzip(content)
-                self.send_header("content-encoding", "gzip")
-                self.send_header("content-length", str(len(gzip_compressed_data)))
+                self.send_header('content-encoding', 'gzip')
+                self.send_header('content-length', str(len(gzip_compressed_data)))
                 self.send_header('content-type', 'application/json; charset=UTF-8')
                 self.send_header('WWW-Authenticate', 'Basic realm="security" charset="UTF-8"')
                 self.end_headers()
                 return gzip_compressed_data
 
             def do_GET(self):
-                username = ""
-                password = ""
-                e_name = "045dffec8b60"
-                e_cluster_name = "R&DBackup"
-                e_host = "172.17.0.2"
-                e_transport_address = e_host + ":9300"
-                e_build_type = "en"
-                e_os_name = "Linux"
-                e_os_pretty_name = "CentOS Linux 8"
-                e_os_version = "5.8.0-53-generic"
+                username = ''
+                password = ''
+                e_name = '045dffec8b60'
+                e_cluster_name = 'R&DBackup'
+                e_host = '172.17.0.2'
+                e_transport_address = e_host + ':9300'
+                e_build_type = 'en'
+                e_os_name = 'Linux'
+                e_os_pretty_name = 'CentOS Linux 8'
+                e_os_version = '5.8.0-53-generic'
 
                 key = self.server.get_auth_key()
                 if self.headers.get('Authorization') is None:
                     _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'elastic', 'action': 'login', 'status': 'failed', 'src_ip': self.client_address[0], 'dest_port': _q_s.port, 'username': username, 'password': password}))
-                    auth_paylaod = bytes(dumps({"error": {"root_cause": [{"type": "security_exception", "reason": "unable to authenticate user [{}] for REST request [/]".format(username), "header": {"WWW-Authenticate": "Basic realm=\"security\" charset=\"UTF-8\""}}], "type": "security_exception", "reason": "unable to authenticate user [{}] for REST request [/]".format(username), "header": {"WWW-Authenticate": "Basic realm=\"security\" charset=\"UTF-8\""}}, "status": 401}), 'utf-8')
+                    auth_paylaod = bytes(dumps({'error': {'root_cause': [{'type': 'security_exception', 'reason': 'unable to authenticate user [{}] for REST request [/]'.format(username), 'header': {'WWW-Authenticate': 'Basic realm=\"security\" charset=\"UTF-8\"'}}], 'type': 'security_exception', 'reason': 'unable to authenticate user [{}] for REST request [/]'.format(username), 'header': {'WWW-Authenticate': 'Basic realm=\"security\" charset=\"UTF-8\"'}}, 'status': 401}), 'utf-8')
                     self.wfile.write(self._set_response_gzip_auth(auth_paylaod, 401))
                 elif self.headers.get('Authorization') == 'Basic ' + str(key):
-                    extracted = ""
+                    extracted = ''
                     _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'elastic', 'action': 'login', 'status': 'success', 'src_ip': self.client_address[0], 'dest_port': _q_s.port, 'username': _q_s.username, 'password': _q_s.password}))
                     try:
                         extracted = urlparse(self.path).path
                     except BaseException:
                         pass
-                    if extracted == "/":
-                        normal_payload = bytes(dumps({"name": e_name, "cluster_name": e_cluster_name, "cluster_uuid": "09cf5BKcTCG2U8z2ndwGEw", "version": {"number": "7.12.1", "build_flavor": "default", "build_type": e_build_type, "build_hash": "3186837139b9c6b6d23c3200870651f10d3343b7", "build_date": "2021-04-20T20:56:39.040728659Z", "build_snapshot": False, "lucene_version": "8.8.0", "minimum_wire_compatibility_version": "6.8.0", "minimum_index_compatibility_version": "6.0.0-beta1"}, "tagline": "You Know, for Search"}), 'utf-8')
+                    if extracted == '/':
+                        normal_payload = bytes(dumps({'name': e_name, 'cluster_name': e_cluster_name, 'cluster_uuid': '09cf5BKcTCG2U8z2ndwGEw', 'version': {'number': '7.12.1', 'build_flavor': 'default', 'build_type': e_build_type, 'build_hash': '3186837139b9c6b6d23c3200870651f10d3343b7', 'build_date': '2021-04-20T20:56:39.040728659Z', 'build_snapshot': False, 'lucene_version': '8.8.0', 'minimum_wire_compatibility_version': '6.8.0', 'minimum_index_compatibility_version': '6.0.0-beta1'}, 'tagline': 'You Know, for Search'}), 'utf-8')
                         self.wfile.write(self._set_response_gzip(normal_payload, 200))
-                    elif extracted.startswith("/_nodes"):
-                        _nodes_payload = bytes(dumps({"_nodes": {"total": 1, "successful": 1, "failed": 0}, "cluster_name": e_cluster_name, "nodes": {"rvyTV3xvTgyt74ti4u12bw": {"name": e_name, "transport_address": e_transport_address, "host": e_host, "ip": e_host, "version": "7.12.1", "build_flavor": "default", "build_type": e_build_type, "build_hash": "3186837139b9c6b6d23c3200870651f10d3343b7", "roles": ["data", "data_cold", "data_content", "data_frozen", "data_hot", "data_warm", "ingest", "master", "ml", "remote_cluster_client", "transform"], "attributes": {"ml.machine_memory": "16685318144", "xpack.installed": "true", "transform.node": "true", "ml.max_open_jobs": "20", "ml.max_jvm_size": "8342470656"}, "process": {"refresh_interval_in_millis": 1000, "id": 7, "mlockall": False}}, "os": {"refresh_interval_in_millis": 1000, "name": e_os_name, "pretty_name": e_os_pretty_name, "arch": "amd64", "version": e_os_version, "available_processors": 32, "allocated_processors": 8}, "process": {"refresh_interval_in_millis": 1000, "id": 7, "mlockall": False}}}), 'utf-8')
+                    elif extracted.startswith('/_nodes'):
+                        _nodes_payload = bytes(dumps({'_nodes': {'total': 1, 'successful': 1, 'failed': 0}, 'cluster_name': e_cluster_name, 'nodes': {'rvyTV3xvTgyt74ti4u12bw': {'name': e_name, 'transport_address': e_transport_address, 'host': e_host, 'ip': e_host, 'version': '7.12.1', 'build_flavor': 'default', 'build_type': e_build_type, 'build_hash': '3186837139b9c6b6d23c3200870651f10d3343b7', 'roles': ['data', 'data_cold', 'data_content', 'data_frozen', 'data_hot', 'data_warm', 'ingest', 'master', 'ml', 'remote_cluster_client', 'transform'], 'attributes': {'ml.machine_memory': '16685318144', 'xpack.installed': 'true', 'transform.node': 'true', 'ml.max_open_jobs': '20', 'ml.max_jvm_size': '8342470656'}, 'process': {'refresh_interval_in_millis': 1000, 'id': 7, 'mlockall': False}}, 'os': {'refresh_interval_in_millis': 1000, 'name': e_os_name, 'pretty_name': e_os_pretty_name, 'arch': 'amd64', 'version': e_os_version, 'available_processors': 32, 'allocated_processors': 8}, 'process': {'refresh_interval_in_millis': 1000, 'id': 7, 'mlockall': False}}}), 'utf-8')
                         self.wfile.write(self._set_response_gzip(_nodes_payload, 200))
-                    elif extracted.startswith("/_cluster/health"):
-                        _cluster_health_payload = bytes(dumps({"cluster_name": e_cluster_name, "status": "green", "timed_out": False, "number_of_nodes": 1, "number_of_data_nodes": 1, "active_primary_shards": 0, "active_shards": 0, "relocating_shards": 0, "initializing_shards": 0, "unassigned_shards": 0, "delayed_unassigned_shards": 0, "number_of_pending_tasks": 0, "number_of_in_flight_fetch": 0, "task_max_waiting_in_queue_millis": 0, "active_shards_percent_as_number": 100.0}), 'utf-8')
+                    elif extracted.startswith('/_cluster/health'):
+                        _cluster_health_payload = bytes(dumps({'cluster_name': e_cluster_name, 'status': 'green', 'timed_out': False, 'number_of_nodes': 1, 'number_of_data_nodes': 1, 'active_primary_shards': 0, 'active_shards': 0, 'relocating_shards': 0, 'initializing_shards': 0, 'unassigned_shards': 0, 'delayed_unassigned_shards': 0, 'number_of_pending_tasks': 0, 'number_of_in_flight_fetch': 0, 'task_max_waiting_in_queue_millis': 0, 'active_shards_percent_as_number': 100.0}), 'utf-8')
                         self.wfile.write(self._set_response_gzip(_cluster_health_payload, 200))
-                    elif extracted.startswith("/_"):
-                        _index = extracted.split("/")[1].lower()
-                        _payload = bytes(dumps({"error": {"root_cause": [{"type": "invalid_index_name_exception", "reason": "Invalid index name [{}], must not start with '_'.".format(_index), "index_uuid": "_na_", "index": _index}], "type": "invalid_index_name_exception", "reason": "Invalid index name [{}], must not start with '_'.".format(_index), "index_uuid": "_na_", "index": _index}, "status": 400}), 'utf-8')
+                    elif extracted.startswith('/_'):
+                        _index = extracted.split('/')[1].lower()
+                        _payload = bytes(dumps({'error': {'root_cause': [{'type': 'invalid_index_name_exception', 'reason': 'Invalid index name [{}], must not start with "_".'.format(_index), 'index_uuid': '_na_', 'index': _index}], 'type': 'invalid_index_name_exception', 'reason': 'Invalid index name [{}], must not start with "_".'.format(_index), 'index_uuid': '_na_', 'index': _index}, 'status': 400}), 'utf-8')
                         self.wfile.write(self._set_response_gzip(_payload, 400))
                     else:
-                        _search = extracted.split("/")[1].lower()
-                        _search_payload = bytes(dumps({"error": {"root_cause": [{"type": "index_not_found_exception", "reason": "no such index [{}]".format(_search), "resource.type": "index_or_alias", "resource.id": _search, "index_uuid": "_na_", "index": _search}], "type": "index_not_found_exception", "reason": "no such index [{}]".format(_search), "resource.type": "index_or_alias", "resource.id": _search, "index_uuid": "_na_", "index": _search}, "status": 404}), 'utf-8')
+                        _search = extracted.split('/')[1].lower()
+                        _search_payload = bytes(dumps({'error': {'root_cause': [{'type': 'index_not_found_exception', 'reason': 'no such index [{}]'.format(_search), 'resource.type': 'index_or_alias', 'resource.id': _search, 'index_uuid': '_na_', 'index': _search}], 'type': 'index_not_found_exception', 'reason': 'no such index [{}]'.format(_search), 'resource.type': 'index_or_alias', 'resource.id': _search, 'index_uuid': '_na_', 'index': _search}, 'status': 404}), 'utf-8')
                         self.wfile.write(self._set_response_gzip(_search_payload, 404))
                 else:
                     authorization_string = self.headers.get('Authorization').split(' ')
@@ -194,7 +194,7 @@ class QElasticServer():
             do_DELETE = do_GET
 
             def send_error(self, code, message=None):
-                self.error_message_format = "Error!"
+                self.error_message_format = 'Error!'
                 SimpleHTTPRequestHandler.send_error(self, code, message)
 
             def log_message(self, format, *args):
@@ -211,38 +211,44 @@ class QElasticServer():
                 super().__init__(address, handlerClass)
 
             def set_auth_key(self, username, password):
-                self.key = b64encode("{}:{}".format(username, password).encode('utf-8')).decode('ascii')
+                self.key = b64encode('{}:{}'.format(username, password).encode('utf-8')).decode('ascii')
 
             def get_auth_key(self):
                 return self.key
 
         server = CustomElasticServer((self.ip, self.port))
         server.set_auth_key(self.username, self.password)
-        self.CreateCert("localhost", self.key, self.cert)
+        self.CreateCert('localhost', self.key, self.cert)
         server.socket = wrap_socket(server.socket, keyfile=self.key, certfile=self.cert, server_side=True,)
         server.serve_forever()
 
     def run_server(self, process=False, auto=False):
+        status = 'error'
+        run = False
         if process:
             if auto and not self.auto_disabled:
                 port = get_free_port()
                 if port > 0:
                     self.port = port
-                    self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                    if self.process.poll() is None:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'elastic', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                    else:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'elastic', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'elastic', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+                    run = True
             elif self.close_port() and self.kill_server():
+                run = True
+
+            if run:
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                if self.process.poll() is None:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'elastic', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'elastic_server', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+                if self.process.poll() is None and check_if_server_is_running(self.uuid):
+                    status = 'success'
+
+            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'elastic_server', 'action': 'process', 'status': status, 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+
+            if status == 'success':
+                return True
+            else:
+                self.kill_server()
+                return False
         else:
             self.elastic_server_main()
+        return None
 
     def test_server(self, ip=None, port=None, username=None, password=None):
         try:
@@ -252,7 +258,7 @@ class QElasticServer():
             _username = username or self.username
             _password = password or self.password
             es = Elasticsearch(['https://{}:{}'.format(_ip, _port)], http_auth=(_username, _password), verify_certs=False)
-            es.search(index="test", body={}, size=99)
+            es.search(index='test', body={}, size=99)
         except Exception as e:
             pass
 

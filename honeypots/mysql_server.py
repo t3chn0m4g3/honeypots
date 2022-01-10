@@ -1,4 +1,4 @@
-"""
+'''
 //  -------------------------------------------------------------
 //  author        Giga
 //  project       qeeqbox/honeypots
@@ -8,7 +8,7 @@
 //  -------------------------------------------------------------
 //  contributors list qeeqbox/honeypots/graphs/contributors
 //  -------------------------------------------------------------
-"""
+'''
 
 from datetime import datetime
 from json import dumps
@@ -23,7 +23,7 @@ from hashlib import sha1
 from mysql.connector import connect as mysqlconnect
 from subprocess import Popen
 from os import path
-from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars
+from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars, check_if_server_is_running
 from uuid import uuid4
 
 
@@ -32,10 +32,6 @@ class QMysqlServer():
         self.auto_disabled = None
         self.mocking = mocking or ''
         self.file_name = dict_ or None
-        if not dict_:
-            self.words = [b"test"]
-        else:
-            self.load_words()
         self.process = None
         self.uuid = 'mysql.log'
         self.config = config
@@ -52,6 +48,12 @@ class QMysqlServer():
         self.port = port or self.port or 3306
         self.username = username or self.username or 'test'
         self.password = password or self.password or 'test'
+
+        if not dict_:
+            self.words = [self.password.encode()]
+        else:
+            self.load_words()
+
         disable_logger(1, tlog)
 
     def load_words(self,):
@@ -63,6 +65,7 @@ class QMysqlServer():
         payload_len = list(pack('<I', len(''.join(base))))
         #payload_len[3] = '\x00'
         string_ = chr(payload_len[0]) + chr(payload_len[1]) + chr(payload_len[2]) + '\x00' + ''.join(base)
+        string_ = bytes([ord(c) for c in string_])
         return string_
 
     def too_many(self):
@@ -70,6 +73,15 @@ class QMysqlServer():
         payload_len = list(pack('<I', len(''.join(base))))
         #payload_len[3] = '\x02'
         string_ = chr(payload_len[0]) + chr(payload_len[1]) + chr(payload_len[2]) + '\x02' + ''.join(base)
+        string_ = bytes([ord(c) for c in string_])
+        return string_
+
+    def access_denied(self):
+        base = ['\xff', '\x15\x04', '#28000', 'Access denied..']
+        payload_len = list(pack('<I', len(''.join(base))))
+        #payload_len[3] = '\x02'
+        string_ = chr(payload_len[0]) + chr(payload_len[1]) + chr(payload_len[2]) + '\x02' + ''.join(base)
+        string_ = bytes([ord(c) for c in string_])
         return string_
 
     def parse_data(self, data):
@@ -81,24 +93,22 @@ class QMysqlServer():
             password = data[36 + username_len + 2:36 + username_len + 2 + password_len]
             rest_ = data[36 + username_len + 2 + password_len:]
             if len(password) == 20:
-                #print(":".join("{:02x}".format((c)) for c in password))
                 return username, password, True
-        except Exception as e:
+        except BaseException:
             pass
         return username, password, False
 
     def decode(self, hash):
-        print(":".join("{:02x}".format((c)) for c in hash))
         try:
             for word in self.words:
                 temp = word
-                word = word.strip('\n')
-                hash1 = sha1(word.encode()).digest()
+                word = word.strip(b'\n')
+                hash1 = sha1(word).digest()
                 hash2 = sha1(hash1).digest()
-                encrypted = ''.join(chr((a) ^ (b)) for a, b in zip(hash1, sha1(b'12345678123456789012' + hash2).digest()))
-                if encrypted == hash:
+                encrypted = [((a) ^ (b)) for a, b in zip(hash1, sha1(b'12345678123456789012' + hash2).digest())]
+                if encrypted == list([(i) for i in hash]):
                     return temp
-        except Exception as e:
+        except BaseException:
             pass
 
         return None
@@ -111,33 +121,48 @@ class QMysqlServer():
             _state = None
 
             def check_bytes(self, string):
-                if isinstance(string, bytes):
-                    return string.decode()
-                else:
-                    return str(string)
+                try:
+                    if isinstance(string, bytes):
+                        return string.decode('utf-8', 'ignore')
+                    else:
+                        return str(string)
+                except Exception as e:
+                    return string
 
             def connectionMade(self):
                 self._state = 1
-                self.transport.write(_q_s.greeting().encode())
+                self.transport.write(_q_s.greeting())
                 _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'mysql', 'action': 'connection', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port}))
 
             def dataReceived(self, data):
-                if self._state == 1:
-                    username, password, good = _q_s.parse_data(data)
-                    username = self.check_bytes(username)
-                    password = self.check_bytes(password)
-                    if good:
-                        if password:
-                            _x = _q_s.decode(password)
-                            if _x == _q_s.password and _x is not None:
-                                _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'mysql', 'action': 'login', 'status': 'success', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'username': _q_s.username, 'password': _q_s.password}))
+                try:
+                    if self._state == 1:
+                        ret_access_denied = False
+                        username, password, good = _q_s.parse_data(data)
+                        username = self.check_bytes(username)
+                        status = 'failed'
+                        if good:
+                            if password:
+                                password_decoded = _q_s.decode(password)
+                                if password_decoded is not None and username == _q_s.username:
+                                    password = self.check_bytes(password_decoded)
+                                    status = 'success'
+                                else:
+                                    password = password.hex()
+                                    ret_access_denied = True
                             else:
-                                _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'mysql', 'action': 'login', 'status': 'failed', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'username': username, 'password': ':'.join(hex((c))[2:] for c in password)}))
-                        else:
-                            _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'mysql', 'action': 'login', 'status': 'failed', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'username': 'UnKnown', 'password': ':'.join(hex((c))[2:] for c in data)}))
+                                ret_access_denied = True
+                                password = ':'.join(hex((c))[2:] for c in data)
+                        _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'mysql', 'action': 'login', 'status': status, 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'username': 'UnKnown', 'password': password}))
 
+                        if ret_access_denied:
+                            self.transport.write(_q_s.access_denied())
+                        else:
+                            self.transport.write(_q_s.too_many())
+                    else:
+                        self.transport.loseConnection()
+                except BaseException as e:
                     self.transport.write(_q_s.too_many())
-                else:
                     self.transport.loseConnection()
 
             def connectionLost(self, reason):
@@ -149,24 +174,29 @@ class QMysqlServer():
         reactor.run()
 
     def run_server(self, process=False, auto=False):
+        status = 'error'
+        run = False
         if process:
             if auto and not self.auto_disabled:
                 port = get_free_port()
                 if port > 0:
                     self.port = port
-                    self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                    if self.process.poll() is None:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'mysql', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                    else:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'mysql', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'mysql', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+                    run = True
             elif self.close_port() and self.kill_server():
+                run = True
+
+            if run:
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                if self.process.poll() is None:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'mysql', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'mysql', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+                if self.process.poll() is None and check_if_server_is_running(self.uuid):
+                    status = 'success'
+
+            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'mysql', 'action': 'process', 'status': status, 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+
+            if status == 'success':
+                return True
+            else:
+                self.kill_server()
+                return False
         else:
             self.mysql_server_main()
 
@@ -177,7 +207,6 @@ class QMysqlServer():
             _username = username or self.username
             _password = password or self.password
             cnx = mysqlconnect(user=_username, password=_password, host=_ip, port=_port, database='test', connect_timeout=1000)
-            print("31323221s")
         except Exception as e:
             pass
 

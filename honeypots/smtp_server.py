@@ -1,4 +1,4 @@
-"""
+'''
 //  -------------------------------------------------------------
 //  author        Giga
 //  project       qeeqbox/honeypots
@@ -8,7 +8,7 @@
 //  -------------------------------------------------------------
 //  contributors list qeeqbox/honeypots/graphs/contributors
 //  -------------------------------------------------------------
-"""
+'''
 
 from datetime import datetime
 from json import dumps
@@ -22,7 +22,7 @@ from time import sleep
 from smtplib import SMTP
 from os import path
 from subprocess import Popen
-from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, set_local_vars
+from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars, check_if_server_is_running
 from uuid import uuid4
 
 
@@ -75,13 +75,16 @@ class QSMTPServer():
             def smtp_AUTH(self, arg):
                 try:
                     if arg.startswith('PLAIN '):
-                        _, username, password = b64decode(arg.split(' ')[1].strip()).decode("utf-8").split('\0')
+                        _, username, password = b64decode(arg.split(' ')[1].strip()).decode('utf-8').split('\0')
                         username = self.check_bytes(username)
                         password = self.check_bytes(password)
+                        status = 'failed'
                         if username == _q_s.username and password == _q_s.password:
-                            _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smtp', 'action': 'login', 'status': 'success', 'src_ip': self.addr[0], 'src_port':self.addr[1], 'dest_port': _q_s.port, 'username':_q_s.username, 'password':_q_s.password}))
-                        else:
-                            _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smtp', 'action': 'login', 'status': 'failed', 'src_ip': self.addr[0], 'src_port':self.addr[1], 'dest_port': _q_s.port, 'username':username, 'password':password}))
+                            username = _q_s.username
+                            password = _q_s.password
+                            status = 'success'
+                        _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smtp', 'action': 'login', 'status': status, 'src_ip': self.addr[0], 'src_port':self.addr[1], 'dest_port': _q_s.port, 'username':_q_s.username, 'password':_q_s.password}))
+
                 except Exception as e:
                     print(e)
                     _q_s.logs.error(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smtp', 'error': 'smtp_AUTH', 'type': 'error -> ' + repr(e)}))
@@ -106,24 +109,29 @@ class QSMTPServer():
         loop(timeout=1.1, use_poll=True)
 
     def run_server(self, process=False, auto=False):
+        status = 'error'
+        run = False
         if process:
             if auto and not self.auto_disabled:
                 port = get_free_port()
                 if port > 0:
                     self.port = port
-                    self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                    if self.process.poll() is None:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smtp', 'action': 'process', 'status': 'success', 'src_ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                    else:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smtp', 'action': 'process', 'status': 'error', 'src_ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smtp', 'action': 'setup', 'status': 'error', 'src_ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+                    run = True
             elif self.close_port() and self.kill_server():
+                run = True
+
+            if run:
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                if self.process.poll() is None:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smtp', 'action': 'process', 'status': 'success', 'src_ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smtp', 'action': 'process', 'status': 'error', 'src_ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+                if self.process.poll() is None and check_if_server_is_running(self.uuid):
+                    status = 'success'
+
+            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smtp', 'action': 'process', 'status': status, 'src_ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+
+            if status == 'success':
+                return True
+            else:
+                self.kill_server()
+                return False
         else:
             self.smtp_server_main()
 
@@ -137,7 +145,7 @@ class QSMTPServer():
             s = SMTP(_ip, _port)
             s.ehlo()
             s.login(_username, _password)
-            s.sendmail("fromtest", "totest", "Nothing")
+            s.sendmail('fromtest', 'totest', 'Nothing')
             s.quit()
         except BaseException:
             pass

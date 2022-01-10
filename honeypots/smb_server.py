@@ -1,4 +1,4 @@
-"""
+'''
 //  -------------------------------------------------------------
 //  author        Giga
 //  project       qeeqbox/honeypots
@@ -8,14 +8,12 @@
 //  -------------------------------------------------------------
 //  contributors list qeeqbox/honeypots/graphs/contributors
 //  -------------------------------------------------------------
-"""
+'''
 
 from datetime import datetime
 from json import dumps
 from warnings import filterwarnings
 filterwarnings(action='ignore', category=DeprecationWarning)
-
-from warnings import filterwarnings
 filterwarnings(action='ignore', module='.*impacket.*')
 
 from logging import StreamHandler, getLogger, DEBUG
@@ -28,7 +26,7 @@ from time import sleep
 from logging import DEBUG, getLogger
 from os import path
 from subprocess import Popen
-from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, set_local_vars
+from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars, check_if_server_is_running
 from uuid import uuid4
 
 #loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
@@ -67,30 +65,30 @@ class QSMBServer():
 
         class Logger(object):
             def write(self, message):
-                #sys.stdout.write(str(">>>>" + message))
+                #sys.stdout.write(str('>>>>' + message))
                 # sys.stdout.flush()
                 try:
-                    if "Incoming connection" in message.strip() or "AUTHENTICATE_MESSAGE" in message.strip() or "authenticated successfully" in message.strip():
+                    if 'Incoming connection' in message.strip() or 'AUTHENTICATE_MESSAGE' in message.strip() or 'authenticated successfully' in message.strip():
                         _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smb', 'action': 'connection', 'msg': message.strip(), 'dest_port': _q_s.port}))
-                    elif ":4141414141414141:" in message.strip():
-                        parsed = message.strip().split(":")
+                    elif ':4141414141414141:' in message.strip():
+                        parsed = message.strip().split(':')
                         if len(parsed) > 2:
                             _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smb', 'action': 'login', 'dest_port': _q_s.port, 'workstation': parsed[0], 'test':parsed[1]}))
                 except Exception as e:
                     _q_s.logs.error(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smb', 'error': 'write', 'type': 'error -> ' + repr(e)}))
 
         handler = StreamHandler(Logger())
-        getLogger("impacket").addHandler(handler)
-        getLogger("impacket").setLevel(DEBUG)
+        getLogger('impacket').addHandler(handler)
+        getLogger('impacket').setLevel(DEBUG)
 
         dirpath = mkdtemp()
         server = smbserver.SimpleSMBServer(listenAddress=self.ip, listenPort=self.port)
-        # server.removeShare("IPC$")
+        # server.removeShare('IPC$')
         if self.folders == '' or self.folders is None:
             server.addShare('C$', dirpath, '', readOnly='yes')
         else:
-            for folder in self.folders.split(","):
-                name, d = folder.split(":")
+            for folder in self.folders.split(','):
+                name, d = folder.split(':')
                 if path.isdir(d) and len(name) > 0:
                     server.addShare(name, d, '', readOnly='yes')
 
@@ -101,24 +99,29 @@ class QSMBServer():
         rmtree(dirpath)
 
     def run_server(self, process=False, auto=False):
+        status = 'error'
+        run = False
         if process:
             if auto and not self.auto_disabled:
                 port = get_free_port()
                 if port > 0:
                     self.port = port
-                    self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--folders', str(self.folders), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                    if self.process.poll() is None:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smb', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password, 'folders': str(self.folders)}))
-                    else:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smb', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password, 'folders': str(self.folders)}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smb', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password, 'folders': str(self.folders)}))
+                    run = True
             elif self.close_port() and self.kill_server():
+                run = True
+
+            if run:
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--folders', str(self.folders), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                if self.process.poll() is None:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smb', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password, 'folders': str(self.folders)}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smb', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password, 'folders': str(self.folders)}))
+                if self.process.poll() is None and check_if_server_is_running(self.uuid):
+                    status = 'success'
+
+            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'smb', 'action': 'process', 'status': status, 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password, 'folders': str(self.folders)}))
+
+            if status == 'success':
+                return True
+            else:
+                self.kill_server()
+                return False
         else:
             self.smb_server_main()
 

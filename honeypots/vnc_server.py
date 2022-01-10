@@ -1,4 +1,4 @@
-"""
+'''
 //  -------------------------------------------------------------
 //  author        Giga
 //  project       qeeqbox/honeypots
@@ -8,7 +8,7 @@
 //  -------------------------------------------------------------
 //  contributors list qeeqbox/honeypots/graphs/contributors
 //  -------------------------------------------------------------
-"""
+'''
 
 from datetime import datetime
 from json import dumps
@@ -26,7 +26,7 @@ from tempfile import gettempdir, _get_candidate_names
 from subprocess import Popen
 from os import path
 #from vncdotool import api as vncapi
-from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars
+from honeypots.helper import close_port_wrapper, get_free_port, kill_server_wrapper, server_arguments, setup_logger, disable_logger, set_local_vars, check_if_server_is_running
 from uuid import uuid4
 
 
@@ -36,9 +36,9 @@ class QVNCServer():
         self.mocking = mocking or ''
         self.random_servers = ['VNC Server']
         self.file_name = dict_ or None
-        self.challenge = unhexlify("00000000901234567890123456789012")
+        self.challenge = unhexlify('00000000901234567890123456789012')
         if not dict_:
-            self.words = ["test"]
+            self.words = ['test']
         else:
             self.load_words()
         self.process = None
@@ -86,6 +86,12 @@ class QVNCServer():
 
             _state = None
 
+            def check_bytes(self, string):
+                if isinstance(string, bytes):
+                    return string.decode()
+                else:
+                    return str(string)
+
             def connectionMade(self):
                 self.transport.write(b'RFB 003.008\n')
                 self._state = 1
@@ -101,16 +107,20 @@ class QVNCServer():
                         self._state = 3
                         self.transport.write(_q_s.challenge)
                 elif self._state == 3:
-                    _x = _q_s.decode(_q_s.challenge, data.hex())
-                    if _x:
-                        if _x == _q_s.password:
-                            _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'vnc', 'action': 'login', 'status': 'success', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'username': 'UnKnown', 'password': _q_s.password}))
+                    try:
+                        username = self.check_bytes(_q_s.decode(_q_s.challenge, data.hex()))
+                        password = self.check_bytes(data)
+                        status = 'failed'
+                        # may need decode
+                        if username == _q_s.username and password == _q_s.password:
+                            username = _q_s.username
+                            password = _q_s.password
+                            status = 'success'
                         else:
-                            _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'vnc', 'action': 'login', 'status': 'failed', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'username': 'UnKnown', 'password': _x}))
-                    else:
-                        if len(data) == 16:
-                            # we need to check the lenth check length first
-                            _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'vnc', 'action': 'login', 'status': 'failed', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'username': 'UnKnown', 'password': data.hex()}))
+                            password = data.hex()
+                        _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'vnc', 'action': 'login', 'status': status, 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': _q_s.port, 'username': username, 'password': data.hex()}))
+                    except Exception as e:
+                        print(e)
                     self.transport.loseConnection()
                 else:
                     self.transport.loseConnection()
@@ -124,24 +134,29 @@ class QVNCServer():
         reactor.run()
 
     def run_server(self, process=False, auto=False):
+        status = 'error'
+        run = False
         if process:
             if auto and not self.auto_disabled:
                 port = get_free_port()
                 if port > 0:
                     self.port = port
-                    self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                    if self.process.poll() is None:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'vnc', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                    else:
-                        self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'vnc', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'vnc', 'action': 'setup', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+                    run = True
             elif self.close_port() and self.kill_server():
+                run = True
+
+            if run:
                 self.process = Popen(['python3', path.realpath(__file__), '--custom', '--ip', str(self.ip), '--port', str(self.port), '--username', str(self.username), '--password', str(self.password), '--mocking', str(self.mocking), '--config', str(self.config), '--uuid', str(self.uuid)])
-                if self.process.poll() is None:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'vnc', 'action': 'process', 'status': 'success', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
-                else:
-                    self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'vnc', 'action': 'process', 'status': 'error', 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+                if self.process.poll() is None and check_if_server_is_running(self.uuid):
+                    status = 'success'
+
+            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'vnc', 'action': 'process', 'status': status, 'ip': self.ip, 'port': self.port, 'username': self.username, 'password': self.password}))
+
+            if status == 'success':
+                return True
+            else:
+                self.kill_server()
+                return False
         else:
             self.vnc_server_main()
 
@@ -151,7 +166,7 @@ class QVNCServer():
             port or self.port
             username or self.username
             password or self.password
-            #client = vncapi.connect("{}::{}".format(self.ip, self.port), password=password)
+            #client = vncapi.connect('{}::{}'.format(self.ip, self.port), password=password)
             # client.captureScreen('screenshot.png')
             # client.disconnect()
         except BaseException:
