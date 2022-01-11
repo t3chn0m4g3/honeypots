@@ -10,6 +10,8 @@
 //  -------------------------------------------------------------
 '''
 
+from datetime import datetime
+from json import dumps
 from warnings import filterwarnings
 filterwarnings(action='ignore', module='.*OpenSSL.*')
 
@@ -31,7 +33,7 @@ class QNTPServer():
         self.auto_disabled = None
         self.mocking = mocking or ''
         self.process = None
-        self.uuid = 'honeypotslogger' + '_' + __class__.__name__ + '_' + str(uuid4())[:8]
+        self.uuid = 'ntp.log'
         self.config = config
         self.ip = None
         self.port = None
@@ -67,7 +69,7 @@ class QNTPServer():
                 mode = 'UnKnown'
                 success = False
                 unpacked = None
-                _q_s.logs.info(['servers', {'server': 'ntp_server', 'action': 'connection', 'ip': addr[0], 'port': addr[1]}])
+                _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'ntp', 'action': 'connection', 'src_ip': addr[0], 'src_port': addr[1], 'dest_port': _q_s.port}))
                 if len(data) == calcsize('!B B B b I I I Q Q Q Q'):
                     version = data[0] >> 3 & 0x7
                     mode = data[0] & 0x7
@@ -79,9 +81,9 @@ class QNTPServer():
                         success = True
 
                 if success:
-                    _q_s.logs.info(['servers', {'server': 'ntp_server', 'action': 'query', 'status': 'success', 'ip': addr[0], 'port': addr[1], 'version': version, 'mode': mode}])
+                    _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'ntp', 'action': 'query', 'status': 'success', 'src_ip': addr[0], 'src_port': addr[1], 'dest_port': _q_s.port, 'version': version, 'mode': mode}))
                 else:
-                    _q_s.logs.info(['servers', {'server': 'ntp_server', 'action': 'query', 'status': 'fail', 'ip': addr[0], 'port': addr[1], 'version': version, 'mode': mode}])
+                    _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'ntp', 'action': 'query', 'status': 'fail', 'src_ip': addr[0], 'src_port': addr[1], 'dest_port': _q_s.port, 'version': version, 'mode': mode}))
 
                 self.transport.loseConnection()
 
@@ -105,7 +107,7 @@ class QNTPServer():
                 if self.process.poll() is None and check_if_server_is_running(self.uuid):
                     status = 'success'
 
-            self.logs.info(['servers', {'server': 'ntp_server', 'action': 'process', 'status': status, 'ip': self.ip, 'port': self.port}])
+            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'ntp', 'action': 'process', 'status': status, 'ip': self.ip, 'port': self.port}))
 
             if status == 'success':
                 return True

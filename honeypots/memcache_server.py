@@ -10,6 +10,8 @@
 //  -------------------------------------------------------------
 '''
 
+from datetime import datetime
+from json import dumps
 from warnings import filterwarnings
 filterwarnings(action='ignore', module='.*OpenSSL.*')
 
@@ -31,7 +33,7 @@ class QMemcacheServer():
         self.auto_disabled = None
         self.mocking = mocking or ''
         self.process = None
-        self.uuid = 'honeypotslogger' + '_' + __class__.__name__ + '_' + str(uuid4())[:8]
+        self.uuid = 'memcache.log'
         self.config = config
         self.ip = None
         self.port = None
@@ -80,7 +82,7 @@ class QMemcacheServer():
                 return ret
 
             def connectionMade(self):
-                _q_s.logs.info(['servers', {'server': 'memcache_server', 'action': 'connection', 'ip': self.transport.getPeer().host, 'port': self.transport.getPeer().port}])
+                _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'memcache', 'action': 'connection', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': self.port}))
 
             def dataReceived(self, data):
                 try:
@@ -97,7 +99,7 @@ class QMemcacheServer():
                     else:
                         self.transport.write(b'ERROR\r\n')
                     if _data[0] != b'':
-                        _q_s.logs.info(['servers', {'server': 'memcache_server', 'action': _data[0].decode(), 'ip': self.transport.getPeer().host, 'port': self.transport.getPeer().port}])
+                        _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'memcache', 'action': _data[0].decode(), 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': self.port}))
                 except BaseException:
                     pass
                 self.transport.loseConnection()
@@ -124,7 +126,7 @@ class QMemcacheServer():
                 if self.process.poll() is None and check_if_server_is_running(self.uuid):
                     status = 'success'
 
-            self.logs.info(['servers', {'server': 'memcache_server', 'action': 'process', 'status': status, 'ip': self.ip, 'port': self.port}])
+            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'memcache', 'action': 'process', 'status': status, 'ip': self.ip, 'dest_port': self.port}))
 
             if status == 'success':
                 return True

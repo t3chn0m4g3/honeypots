@@ -10,6 +10,8 @@
 //  -------------------------------------------------------------
 '''
 
+from datetime import datetime
+from json import dumps
 from warnings import filterwarnings
 filterwarnings(action='ignore', module='.*OpenSSL.*')
 
@@ -33,7 +35,7 @@ class QOracleServer():
         self.auto_disabled = None
         self.mocking = mocking or ''
         self.process = None
-        self.uuid = 'honeypotslogger' + '_' + __class__.__name__ + '_' + str(uuid4())[:8]
+        self.uuid = 'oracle.log'
         self.config = config
         self.ip = None
         self.port = None
@@ -92,12 +94,12 @@ class QOracleServer():
                 return service_name, program, local_user
 
             def connectionMade(self):
-                _q_s.logs.info(['servers', {'server': 'oracle_server', 'action': 'connection', 'ip': self.transport.getPeer().host, 'port': self.transport.getPeer().port}])
+                _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'oracle', 'action': 'connection', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': self.port}))
 
             def dataReceived(self, data):
                 service_name, program, local_user = self.parse_payload(data)
                 if service_name or program or local_user:
-                    _q_s.logs.info(['servers', {'server': 'oracle_server', 'action': 'login', 'ip': self.transport.getPeer().host, 'port': self.transport.getPeer().port, 'local_user': local_user, 'program': program, 'service_name': service_name}])
+                    _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'oracle', 'action': 'login', 'src_ip': self.transport.getPeer().host, 'src_port': self.transport.getPeer().port, 'dest_port': self.port, 'local_user': local_user, 'program': program, 'service_name': service_name}))
                 self.transport.write(self.refuse_payload())
                 self.transport.loseConnection()
 
@@ -123,7 +125,7 @@ class QOracleServer():
                 if self.process.poll() is None and check_if_server_is_running(self.uuid):
                     status = 'success'
 
-            self.logs.info(['servers', {'server': 'oracle_server', 'action': 'process', 'status': status, 'ip': self.ip, 'port': self.port}])
+            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'oracle', 'action': 'process', 'status': status, 'src_ip': self.ip, 'dest_port': self.port}))
 
             if status == 'success':
                 return True
