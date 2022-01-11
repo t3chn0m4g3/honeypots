@@ -99,7 +99,7 @@ class QSNMPServer():
                 if self.process.poll() is None and check_if_server_is_running(self.uuid):
                     status = 'success'
 
-            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'snmp', 'action': 'process', 'status': status, 'src_ip': self.ip, 'dest_port': self.port}))
+            self.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'snmp', 'action': 'process', 'status': status, 'ip': self.ip, 'port': self.port}))
 
             if status == 'success':
                 return True
