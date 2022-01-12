@@ -167,7 +167,7 @@ class QHTTPSServer():
                 except BaseException:
                     pass
 
-                _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'connection', 'src_ip': request.getClientIP(), 'dest_port': _q_s.port, 'request': headers}))
+                _q_s.logs.info(dumps({'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ'), 'protocol': 'https', 'action': 'connection', 'src_ip': request.getClientIP(), 'dest_port': _q_s.port, 'request_headers': headers}))
 
                 if self.server != '':
                     request.responseHeaders.removeHeader('Server')
